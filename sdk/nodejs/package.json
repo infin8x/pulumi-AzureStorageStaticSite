@@ -1,11 +1,11 @@
 {
-    "name": "@pulumi/xyz",
+    "name": "@pulumi/AzureStorageStaticSite",
     "version": "${VERSION}",
     "scripts": {
         "build": "tsc"
     },
     "dependencies": {
-        "@pulumi/aws": "^4.0.0"
+        "@pulumi/azure-native": "^1.9.0"
     },
     "devDependencies": {
         "typescript": "^3.7.0"

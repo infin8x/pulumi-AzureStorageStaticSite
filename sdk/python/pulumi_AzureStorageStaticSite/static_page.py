@@ -7,30 +7,30 @@ import pulumi
 import pulumi.runtime
 from typing import Any, Mapping, Optional, Sequence, Union, overload
 from . import _utilities
-import pulumi_aws
+import pulumi_azure_native
 
 __all__ = ['StaticPageArgs', 'StaticPage']
 
 @pulumi.input_type
 class StaticPageArgs:
     def __init__(__self__, *,
-                 index_content: pulumi.Input[str]):
+                 index_content: str):
         """
         The set of arguments for constructing a StaticPage resource.
-        :param pulumi.Input[str] index_content: The HTML content for index.html.
+        :param str index_content: The HTML content for index.html.
         """
         pulumi.set(__self__, "index_content", index_content)
 
     @property
     @pulumi.getter(name="indexContent")
-    def index_content(self) -> pulumi.Input[str]:
+    def index_content(self) -> str:
         """
         The HTML content for index.html.
         """
         return pulumi.get(self, "index_content")
 
     @index_content.setter
-    def index_content(self, value: pulumi.Input[str]):
+    def index_content(self, value: str):
         pulumi.set(self, "index_content", value)
 
 
@@ -39,13 +39,13 @@ class StaticPage(pulumi.ComponentResource):
     def __init__(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 index_content: Optional[pulumi.Input[str]] = None,
+                 index_content: Optional[str] = None,
                  __props__=None):
         """
         Create a StaticPage resource with the given unique name, props, and options.
         :param str resource_name: The name of the resource.
         :param pulumi.ResourceOptions opts: Options for the resource.
-        :param pulumi.Input[str] index_content: The HTML content for index.html.
+        :param str index_content: The HTML content for index.html.
         """
         ...
     @overload
@@ -70,7 +70,7 @@ class StaticPage(pulumi.ComponentResource):
     def _internal_init(__self__,
                  resource_name: str,
                  opts: Optional[pulumi.ResourceOptions] = None,
-                 index_content: Optional[pulumi.Input[str]] = None,
+                 index_content: Optional[str] = None,
                  __props__=None):
         if opts is None:
             opts = pulumi.ResourceOptions()
@@ -88,22 +88,31 @@ class StaticPage(pulumi.ComponentResource):
             if index_content is None and not opts.urn:
                 raise TypeError("Missing required property 'index_content'")
             __props__.__dict__["index_content"] = index_content
-            __props__.__dict__["bucket"] = None
+            __props__.__dict__["cdn_url"] = None
+            __props__.__dict__["storage_account"] = None
             __props__.__dict__["website_url"] = None
         super(StaticPage, __self__).__init__(
-            'xyz:index:StaticPage',
+            'AzureStorageStaticSite:index:StaticPage',
             resource_name,
             __props__,
             opts,
             remote=True)
 
     @property
-    @pulumi.getter
-    def bucket(self) -> pulumi.Output['pulumi_aws.s3.Bucket']:
+    @pulumi.getter(name="cdnUrl")
+    def cdn_url(self) -> pulumi.Output[str]:
+        """
+        The CDN URL.
+        """
+        return pulumi.get(self, "cdn_url")
+
+    @property
+    @pulumi.getter(name="storageAccount")
+    def storage_account(self) -> pulumi.Output['pulumi_azure_native.storage.StorageAccount']:
         """
         The bucket resource.
         """
-        return pulumi.get(self, "bucket")
+        return pulumi.get(self, "storage_account")
 
     @property
     @pulumi.getter(name="websiteUrl")

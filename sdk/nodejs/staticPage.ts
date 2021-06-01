@@ -4,11 +4,11 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as utilities from "./utilities";
 
-import * as aws from "@pulumi/aws";
+import * as azure_native from "@pulumi/azure-native";
 
 export class StaticPage extends pulumi.ComponentResource {
     /** @internal */
-    public static readonly __pulumiType = 'xyz:index:StaticPage';
+    public static readonly __pulumiType = 'AzureStorageStaticSite:index:StaticPage';
 
     /**
      * Returns true if the given object is an instance of StaticPage.  This is designed to work even
@@ -22,9 +22,13 @@ export class StaticPage extends pulumi.ComponentResource {
     }
 
     /**
+     * The CDN URL.
+     */
+    public /*out*/ readonly cdnUrl!: pulumi.Output<string>;
+    /**
      * The bucket resource.
      */
-    public /*out*/ readonly bucket!: pulumi.Output<aws.s3.Bucket>;
+    public /*out*/ readonly storageAccount!: pulumi.Output<azure_native.storage.StorageAccount>;
     /**
      * The website URL.
      */
@@ -45,10 +49,12 @@ export class StaticPage extends pulumi.ComponentResource {
                 throw new Error("Missing required property 'indexContent'");
             }
             inputs["indexContent"] = args ? args.indexContent : undefined;
-            inputs["bucket"] = undefined /*out*/;
+            inputs["cdnUrl"] = undefined /*out*/;
+            inputs["storageAccount"] = undefined /*out*/;
             inputs["websiteUrl"] = undefined /*out*/;
         } else {
-            inputs["bucket"] = undefined /*out*/;
+            inputs["cdnUrl"] = undefined /*out*/;
+            inputs["storageAccount"] = undefined /*out*/;
             inputs["websiteUrl"] = undefined /*out*/;
         }
         if (!opts.version) {
@@ -65,5 +71,5 @@ export interface StaticPageArgs {
     /**
      * The HTML content for index.html.
      */
-    readonly indexContent: pulumi.Input<string>;
+    indexContent: string;
 }

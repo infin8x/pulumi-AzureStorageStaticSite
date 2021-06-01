@@ -1,7 +1,7 @@
 {
-    "name": "xyz",
+    "name": "AzureStorageStaticSite",
     "resources": {
-        "xyz:index:StaticPage": {
+        "AzureStorageStaticSite:index:StaticPage": {
             "isComponent": true,
             "inputProperties": {
                 "indexContent": {
@@ -12,19 +12,25 @@
             "requiredInputs": [
                 "indexContent"
             ],
+            "plainInputs": ["indexContent"],
             "properties": {
-                "bucket": {
-                    "$ref": "/aws/v4.0.0/schema.json#/resources/aws:s3%2Fbucket:Bucket",
+                "storageAccount": {
+                    "$ref": "/azure-native/v1.9.0/schema.json#/resources/azure-native:storage:StorageAccount",
                     "description": "The bucket resource."
                 },
                 "websiteUrl": {
                     "type": "string",
                     "description": "The website URL."
+                },
+                "cdnUrl": {
+                    "type": "string",
+                    "description": "The CDN URL."
                 }
             },
             "required": [
-                "bucket",
-                "websiteUrl"
+                "storageAccount",
+                "websiteUrl",
+                "cdnUrl"
             ]
         }
     },
@@ -32,16 +38,16 @@
         "csharp": {
             "packageReferences": {
                 "Pulumi": "3.*",
-                "Pulumi.Aws": "4.*"
+                "Pulumi.AzureNative": "1.*"
             }
         },
         "go": {
             "generateResourceContainerTypes": true,
-            "importBasePath": "github.com/pulumi/pulumi-xyz/sdk/go/xyz"
+            "importBasePath": "github.com/pulumi/pulumi-AzureStorageStaticSite/sdk/go/AzureStorageStaticSite"
         },
         "nodejs": {
             "dependencies": {
-                "@pulumi/aws": "^4.0.0"
+                "@pulumi/azure-native": "^1.9.0"
             },
             "devDependencies": {
                 "typescript": "^3.7.0"
@@ -50,7 +56,7 @@
         "python": {
             "requires": {
                 "pulumi": ">=3.0.0,<4.0.0",
-                "pulumi-aws": ">=4.0.0,<5.0.0"
+                "pulumi-azure-native": ">=1.0.0,<2.0.0"
             }
         }
     }

@@ -1,8 +1,9 @@
-import * as xyz from "@pulumi/xyz";
+import * as AzureStorageStaticSite from "@pulumi/AzureStorageStaticSite";
 
-const page = new xyz.StaticPage("page", {
+const page = new AzureStorageStaticSite.StaticPage("page", {
     indexContent: "<html><body><p>Hello world!</p></body></html>",
 });
 
-export const bucket = page.bucket;
-export const url = page.websiteUrl;
+export const storageAccount = page.storageAccount;
+export const websiteUrl = page.websiteUrl;
+export const cdnUrl = page.cdnUrl;

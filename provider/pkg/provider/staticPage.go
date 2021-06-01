@@ -15,22 +15,28 @@
 package provider
 
 import (
-	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/s3"
+	"fmt"
+	"strings"
+
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/cdn"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/resources"
+	"github.com/pulumi/pulumi-azure-native/sdk/go/azure/storage"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
 // The set of arguments for creating a StaticPage component resource.
 type StaticPageArgs struct {
 	// The HTML content for index.html.
-	IndexContent pulumi.StringInput `pulumi:"indexContent"`
+	IndexContent string
 }
 
 // The StaticPage component resource.
 type StaticPage struct {
 	pulumi.ResourceState
 
-	Bucket     *s3.Bucket          `pulumi:"bucket"`
-	WebsiteUrl pulumi.StringOutput `pulumi:"websiteUrl"`
+	StorageAccount *storage.StorageAccount
+	WebsiteUrl     pulumi.StringOutput
+	CdnUrl         pulumi.StringOutput
 }
 
 // NewStaticPage creates a new StaticPage component resource.
@@ -41,59 +47,113 @@ func NewStaticPage(ctx *pulumi.Context,
 	}
 
 	component := &StaticPage{}
-	err := ctx.RegisterComponentResource("xyz:index:StaticPage", name, component, opts...)
-	if err != nil {
-		return nil, err
-	}
+
+	var err error
 
 	// Create a bucket and expose a website index document.
-	bucket, err := s3.NewBucket(ctx, name, &s3.BucketArgs{
-		Website: s3.BucketWebsiteArgs{
-			IndexDocument: pulumi.String("index.html"),
-		},
-	}, pulumi.Parent(component))
+	resourceGroup, err := resources.NewResourceGroup(ctx, "website-rg", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create a bucket object for the index document.
-	if _, err := s3.NewBucketObject(ctx, name, &s3.BucketObjectArgs{
-		Bucket:      bucket.ID(),
-		Key:         pulumi.String("index.html"),
-		Content:     args.IndexContent,
-		ContentType: pulumi.String("text/html"),
-	}, pulumi.Parent(bucket)); err != nil {
+	profile, err := cdn.NewProfile(ctx, "profile", &cdn.ProfileArgs{
+		ResourceGroupName: resourceGroup.Name,
+		Sku: &cdn.SkuArgs{
+			Name: cdn.SkuName_Standard_Microsoft,
+		},
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	// Set the access policy for the bucket so all objects are readable.
-	if _, err := s3.NewBucketPolicy(ctx, "bucketPolicy", &s3.BucketPolicyArgs{
-		Bucket: bucket.ID(),
-		Policy: pulumi.Any(map[string]interface{}{
-			"Version": "2012-10-17",
-			"Statement": []map[string]interface{}{
-				{
-					"Effect":    "Allow",
-					"Principal": "*",
-					"Action": []interface{}{
-						"s3:GetObject",
-					},
-					"Resource": []interface{}{
-						pulumi.Sprintf("arn:aws:s3:::%s/*", bucket.ID()), // policy refers to bucket name explicitly
-					},
-				},
+	storageAccount, err := storage.NewStorageAccount(ctx, "sa", &storage.StorageAccountArgs{
+		ResourceGroupName: resourceGroup.Name,
+		Kind:              storage.KindStorageV2,
+		Sku: &storage.SkuArgs{
+			Name: storage.SkuName_Standard_LRS,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	endpointOrigin := storageAccount.PrimaryEndpoints.Web().ApplyT(func(endpoint string) string {
+		endpoint = strings.ReplaceAll(endpoint, "https://", "")
+		endpoint = strings.ReplaceAll(endpoint, "/", "")
+		return endpoint
+	}).(pulumi.StringOutput)
+
+	queryStringCachingBehaviorNotSet := cdn.QueryStringCachingBehaviorNotSet
+	endpoint, err := cdn.NewEndpoint(ctx, "endpoint", &cdn.EndpointArgs{
+		IsHttpAllowed:    pulumi.Bool(false),
+		IsHttpsAllowed:   pulumi.Bool(true),
+		OriginHostHeader: endpointOrigin,
+		Origins: cdn.DeepCreatedOriginArray{
+			&cdn.DeepCreatedOriginArgs{
+				HostName:  endpointOrigin,
+				HttpsPort: pulumi.Int(443),
+				Name:      pulumi.String("origin-storage-account"),
 			},
-		}),
-	}, pulumi.Parent(bucket)); err != nil {
+		},
+		ProfileName:                profile.Name,
+		QueryStringCachingBehavior: &queryStringCachingBehaviorNotSet,
+		ResourceGroupName:          resourceGroup.Name,
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	component.Bucket = bucket
-	component.WebsiteUrl = bucket.WebsiteEndpoint
+	// Enable static website support
+	staticWebsite, err := storage.NewStorageAccountStaticWebsite(ctx, "staticWebsite", &storage.StorageAccountStaticWebsiteArgs{
+		AccountName:       storageAccount.Name,
+		ResourceGroupName: resourceGroup.Name,
+		IndexDocument:     pulumi.String("index.html"),
+		Error404Document:  pulumi.String("404.html"),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Upload the files
+	_, err = storage.NewBlob(ctx, "index.html", &storage.BlobArgs{
+		ResourceGroupName: resourceGroup.Name,
+		AccountName:       storageAccount.Name,
+		ContainerName:     staticWebsite.ContainerName,
+		Source:            pulumi.NewStringAsset(args.IndexContent),
+		ContentType:       pulumi.String("text/html"),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// _, err = storage.NewBlob(ctx, "404.html", &storage.BlobArgs{
+	// 	ResourceGroupName: resourceGroup.Name,
+	// 	AccountName:       storageAccount.Name,
+	// 	ContainerName:     staticWebsite.ContainerName,
+	// 	Source:            pulumi.NewFileAsset("./wwwroot/404.html"),
+	// 	ContentType:       pulumi.String("text/html"),
+	// })
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	err = ctx.RegisterComponentResource("AzureStorageStaticSite:index:StaticPage", name, component, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	cdnUrl := endpoint.HostName.ApplyT(func(hostName string) string {
+		return fmt.Sprintf("%v%v", "https://", hostName)
+	})
+
+	component.StorageAccount = storageAccount
+	component.WebsiteUrl = storageAccount.PrimaryEndpoints.Web()
+	// component.CdnUrl = cdnUrl
 
 	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{
-		"bucket":     bucket,
-		"websiteUrl": bucket.WebsiteEndpoint,
+		"storageAccount": storageAccount,
+		"websiteUrl":     storageAccount.PrimaryEndpoints.Web(),
+		"cdnUrl":         cdnUrl,
 	}); err != nil {
 		return nil, err
 	}

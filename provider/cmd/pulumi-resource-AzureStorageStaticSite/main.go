@@ -17,11 +17,11 @@
 package main
 
 import (
-	"github.com/pulumi/pulumi-xyz/pkg/provider"
-	"github.com/pulumi/pulumi-xyz/pkg/version"
+	"github.com/infin8x/pulumi-AzureStorageStaticSite/pkg/provider"
+	"github.com/infin8x/pulumi-AzureStorageStaticSite/pkg/version"
 )
 
-var providerName = "xyz"
+var providerName = "AzureStorageStaticSite"
 
 func main() {
 	provider.Serve(providerName, version.Version, pulumiSchema)

@@ -7,16 +7,22 @@ using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Pulumi.Serialization;
 
-namespace Pulumi.Xyz
+namespace Pulumi.AzureStorageStaticSite
 {
-    [XyzResourceType("xyz:index:StaticPage")]
+    [AzureStorageStaticSiteResourceType("AzureStorageStaticSite:index:StaticPage")]
     public partial class StaticPage : Pulumi.ComponentResource
     {
         /// <summary>
+        /// The CDN URL.
+        /// </summary>
+        [Output("cdnUrl")]
+        public Output<string> CdnUrl { get; private set; } = null!;
+
+        /// <summary>
         /// The bucket resource.
         /// </summary>
-        [Output("bucket")]
-        public Output<Pulumi.Aws.S3.Bucket> Bucket { get; private set; } = null!;
+        [Output("storageAccount")]
+        public Output<Pulumi.AzureNative.Storage.StorageAccount> StorageAccount { get; private set; } = null!;
 
         /// <summary>
         /// The website URL.
@@ -33,7 +39,7 @@ namespace Pulumi.Xyz
         /// <param name="args">The arguments used to populate this resource's properties</param>
         /// <param name="options">A bag of options that control this resource's behavior</param>
         public StaticPage(string name, StaticPageArgs args, ComponentResourceOptions? options = null)
-            : base("xyz:index:StaticPage", name, args ?? new StaticPageArgs(), MakeResourceOptions(options, ""), remote: true)
+            : base("AzureStorageStaticSite:index:StaticPage", name, args ?? new StaticPageArgs(), MakeResourceOptions(options, ""), remote: true)
         {
         }
 
@@ -56,7 +62,7 @@ namespace Pulumi.Xyz
         /// The HTML content for index.html.
         /// </summary>
         [Input("indexContent", required: true)]
-        public Input<string> IndexContent { get; set; } = null!;
+        public string IndexContent { get; set; } = null!;
 
         public StaticPageArgs()
         {
